@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Class Dashboard &mdash; Admin</title>
+<link rel="stylesheet" href="assets/css/style.css">
+</head>
+<body>
+
+<div class="login-wrap" id="loginWrap">
+  <div class="login-card">
+    <h1>Admin login</h1>
+    <form id="loginForm">
+      <label class="field">
+        <span>Password</span>
+        <input type="password" id="loginPassword" autocomplete="current-password" required>
+      </label>
+      <button type="submit" class="btn-primary" style="width:100%;">Log in</button>
+      <p class="hint" id="loginError" style="color:#b91c1c;"></p>
+    </form>
+  </div>
+</div>
+
+<div class="admin-wrap" id="adminWrap" style="display:none;">
+  <div class="admin-header">
+    <h1>Class Dashboard &mdash; Admin</h1>
+    <button class="btn-secondary btn-small" id="logoutBtn">Log out</button>
+  </div>
+
+  <div class="card" id="tokenCard">
+    <h2>GitHub connection</h2>
+    <p class="hint">Saving changes here commits an updated <code>config.json</code> to your GitHub repo, which the display board reads. You need a GitHub Personal Access Token (scoped only to this repo's Contents) stored in this browser.</p>
+    <div class="row">
+      <label class="field">
+        <span>GitHub token</span>
+        <input type="password" id="ghToken" placeholder="github_pat_...">
+      </label>
+      <label class="field">
+        <span>Repo (owner/name)</span>
+        <input type="text" id="ghRepo" placeholder="egonspengler24/classroom-dashboard">
+      </label>
+    </div>
+    <button class="btn-secondary btn-small" id="saveTokenBtn">Save connection</button>
+    <button class="btn-secondary btn-small" id="forgetTokenBtn">Forget token</button>
+    <span class="hint" id="tokenStatus"></span>
+  </div>
+
+  <div class="card">
+    <h2>Board settings</h2>
+    <div class="row">
+      <label class="field">
+        <span>Class name</span>
+        <input type="text" id="classNameInput" placeholder="Our Class">
+      </label>
+      <label class="field">
+        <span>Grid columns</span>
+        <input type="number" id="gridColumnsInput" min="1" max="6" value="3">
+      </label>
+      <label class="field">
+        <span>Board refresh (seconds)</span>
+        <input type="number" id="pollIntervalInput" min="10" max="600" value="45">
+      </label>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>Widgets</h2>
+    <div id="widgetList"></div>
+    <div class="row" style="align-items:flex-end;">
+      <label class="field" style="max-width:260px;">
+        <span>Add widget</span>
+        <select id="addWidgetType"></select>
+      </label>
+      <button class="btn-secondary" id="addWidgetBtn">Add widget</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <button class="btn-primary" id="saveConfigBtn">Save &amp; publish to board</button>
+    <button class="btn-secondary" id="reloadConfigBtn">Reload from GitHub</button>
+    <div id="saveStatus"></div>
+  </div>
+
+  <div class="card">
+    <h2>Live preview</h2>
+    <p class="hint">Approximate preview only &mdash; actual board sizing depends on the display.</p>
+    <div class="preview-frame-wrap">
+      <div class="board" id="previewBoard" style="height:50vh;">
+        <header class="board-header">
+          <div class="class-name" id="previewClassName">Our Class</div>
+          <div class="clock">--:--</div>
+        </header>
+        <main class="board-main" id="previewMain"></main>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="assets/js/widgets.js"></script>
+<script src="assets/js/admin.js"></script>
+</body>
+</html>

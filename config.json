@@ -1,0 +1,42 @@
+{
+  "className": "Our Class",
+  "gridColumns": 3,
+  "pollIntervalSeconds": 45,
+  "widgets": [
+    {
+      "id": "lunch-menu",
+      "type": "dinner-menu",
+      "title": "What's for Lunch",
+      "enabled": true,
+      "colSpan": 1,
+      "rowSpan": 1,
+      "order": 1,
+      "schedule": { "start": "", "end": "" },
+      "settings": {
+        "menu": {
+          "monday": "Pizza, salad, fresh fruit",
+          "tuesday": "Roast chicken, potatoes, veg",
+          "wednesday": "Pasta bolognese, garlic bread",
+          "thursday": "Fish & chips, peas",
+          "friday": "Jacket potato, beans, cheese"
+        }
+      }
+    },
+    {
+      "id": "announcements-1",
+      "type": "announcements",
+      "title": "Announcements",
+      "enabled": true,
+      "colSpan": 2,
+      "rowSpan": 1,
+      "order": 2,
+      "schedule": { "start": "", "end": "" },
+      "settings": {
+        "items": [
+          "Welcome to the class dashboard!",
+          "Edit me from the admin page."
+        ]
+      }
+    }
+  ]
+}
