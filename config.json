@@ -26,13 +26,33 @@
       }
     },
     {
+      "id": "weather-1",
+      "type": "weather",
+      "title": "Weather",
+      "enabled": true,
+      "colSpan": 1,
+      "rowSpan": 1,
+      "order": 2,
+      "schedule": {
+        "start": "",
+        "end": ""
+      },
+      "settings": {
+        "locationName": "Morecambe, UK",
+        "latitude": 54.07,
+        "longitude": -2.86,
+        "startHour": 8,
+        "endHour": 18
+      }
+    },
+    {
       "id": "announcements-1",
       "type": "announcements",
       "title": "Announcements",
       "enabled": true,
-      "colSpan": 2,
+      "colSpan": 1,
       "rowSpan": 1,
-      "order": 2,
+      "order": 3,
       "schedule": {
         "start": "",
         "end": ""

@@ -46,10 +46,6 @@
     initAdmin();
   }
 
-  if (sessionStorage.getItem(SESSION_KEY) === "1") {
-    showAdmin();
-  }
-
   // ---------- Admin state ----------
   let configState = null;
   let adminInitialised = false;
@@ -137,6 +133,12 @@
     reloadConfigBtn.addEventListener("click", loadConfig);
 
     loadConfig();
+
+    // Widgets like weather fetch data asynchronously and don't trigger a
+    // re-render themselves, so poll the preview to pick up such updates.
+    setInterval(() => {
+      if (configState) updatePreview();
+    }, 5000);
   }
 
   function updateTokenStatus() {
@@ -327,5 +329,9 @@
 
   function setStatus(html, kind) {
     saveStatus.innerHTML = `<div class="status-msg ${kind}">${html}</div>`;
+  }
+
+  if (sessionStorage.getItem(SESSION_KEY) === "1") {
+    showAdmin();
   }
 })();
