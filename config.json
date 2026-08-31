@@ -1,5 +1,5 @@
 {
-  "className": "Our Class",
+  "className": "Test Class (write-path check)",
   "gridColumns": 3,
   "pollIntervalSeconds": 45,
   "widgets": [
@@ -11,7 +11,10 @@
       "colSpan": 1,
       "rowSpan": 1,
       "order": 1,
-      "schedule": { "start": "", "end": "" },
+      "schedule": {
+        "start": "",
+        "end": ""
+      },
       "settings": {
         "menu": {
           "monday": "Pizza, salad, fresh fruit",
@@ -30,7 +33,10 @@
       "colSpan": 2,
       "rowSpan": 1,
       "order": 2,
-      "schedule": { "start": "", "end": "" },
+      "schedule": {
+        "start": "",
+        "end": ""
+      },
       "settings": {
         "items": [
           "Welcome to the class dashboard!",
