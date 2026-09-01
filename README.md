@@ -27,6 +27,7 @@ The token is stored only in that browser's `localStorage` — it is never sent a
 - **Weather** — today's forecast for a configurable location, in 2-hour steps, via [Open-Meteo](https://open-meteo.com/) (no API key needed).
 - **Announcements** — free-text list, one per line, via the admin page.
 - **Word of the Week** — fully autonomous: picks a word from [`data/word-of-the-week.json`](data/word-of-the-week.json) based on the ISO calendar week, so it changes every Monday with no admin action needed and stays identical across every device. To change the vocabulary, edit that JSON file directly on GitHub (each entry is `{ "word", "definition", "example" }`); the board picks up edits the same way it picks up `config.json` changes.
+- **Countdown Timer** — a digital `00:00` readout with 5 tappable preset buttons underneath (defaults: 1:00, 2:00, 3:00, 5:00, 7:00, editable in the admin page). Tapping a preset on the board instantly (re)starts the countdown from that value; a small reset button clears it back to idle. Runs entirely in the board's browser tab — nothing is saved or synced, so it resets on page reload, and each teacher/board just uses whatever is showing locally.
 
 ## Adding a widget type
 
@@ -38,6 +39,8 @@ Everything about a widget type lives in one place: `assets/js/widgets.js`. Add a
 - `renderDisplay(settings)` — HTML string rendered on the board
 - `renderAdminForm(settings)` — HTML string of the settings form in the admin page (return an info message instead of fields if the widget needs no per-instance configuration, like Word of the Week)
 - `readAdminForm(container)` — reads that form back into a settings object
+
+Most widgets are stateless — `renderDisplay()` is called fresh on every refresh and its HTML fully replaces the widget's body. A widget that needs to keep running state across those refreshes (like the countdown's live timer) should instead provide `mount(container, settings)`, which the display board calls exactly once per widget instance and never overwrites afterwards; it can return `{ dispose() {...} }` to clean up (e.g. clear an interval) if the widget is later removed or scheduled out. Such a widget should still implement `renderDisplay()` for the admin page's (non-interactive) live preview. See `widgets.js`'s countdown entry for a worked example.
 
 No other file needs to change — both `index.html` and `admin.html` pick up new types automatically.
 

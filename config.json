@@ -77,6 +77,22 @@
         "end": ""
       },
       "settings": {}
+    },
+    {
+      "id": "countdown-1",
+      "type": "countdown",
+      "title": "Countdown",
+      "enabled": true,
+      "colSpan": 1,
+      "rowSpan": 1,
+      "order": 5,
+      "schedule": {
+        "start": "",
+        "end": ""
+      },
+      "settings": {
+        "presets": [60, 120, 180, 300, 420]
+      }
     }
   ]
 }

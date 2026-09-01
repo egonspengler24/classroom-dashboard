@@ -2,10 +2,24 @@
  * Widget registry shared by the display board (display.js) and the admin
  * editor (admin.js). To add a new widget type, add an entry here with:
  *   - label:            shown in the admin "add widget" dropdown
+ *   - icon:             (optional) inline SVG string shown next to the title
  *   - defaultSettings(): fresh settings object for a newly-added widget
  *   - renderDisplay(settings): returns an HTML string for the board
  *   - renderAdminForm(settings): returns an HTML string of form fields
  *   - readAdminForm(container): reads the form fields back into a settings object
+ *
+ * Most widgets are stateless: renderDisplay() is called fresh on every poll
+ * and its returned HTML fully replaces the widget's body. A widget that
+ * needs to keep running state across those re-renders (e.g. a countdown
+ * timer) should instead provide:
+ *   - mount(container, settings): builds its own DOM into `container` once
+ *     and wires up any interactivity/timers itself. display.js calls this
+ *     exactly once per widget instance and never touches `container` again
+ *     afterwards, so the widget's live state survives the board's periodic
+ *     re-renders. May return `{ dispose() {...} }` to clean up (e.g. clear
+ *     an interval) if the widget is later removed or scheduled out.
+ *     Such widgets should still provide renderDisplay() for the admin
+ *     page's (non-interactive) live preview.
  * Nothing else in the app needs to change.
  */
 
@@ -26,6 +40,7 @@ const HeaderIcons = {
   speaker: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v4a1 1 0 0 0 1 1h2l5 4V5L6 9H4a1 1 0 0 0-1 1Z"/><path d="M15 8a4 4 0 0 1 0 8"/><path d="M18 5a8 8 0 0 1 0 14"/></svg>`,
   sunCloud: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="7" r="2.6"/><path d="M8 2.3v1M8 12v1M3 7h1M13 7h1M4.6 3.6l.7.7M11.4 3.6l-.7.7"/><path d="M9.5 16.5a4 4 0 0 1 .3-8 5 5 0 0 1 9 2.2 3.5 3.5 0 0 1-.8 6.8H9.5Z"/></svg>`,
   book: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6c-1.5-1.5-4-2-8-2v14c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2V4c-4 0-6.5.5-8 2Z"/><path d="M12 6v14"/></svg>`,
+  timer: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2h6"/><path d="M12 2v2"/><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/></svg>`,
 };
 
 const WidgetTypes = {
@@ -362,6 +377,143 @@ WidgetTypes["word-of-the-week"] = {
 
   readAdminForm() {
     return {};
+  },
+};
+
+// ---- Countdown widget helpers ----
+
+const COUNTDOWN_DEFAULT_PRESETS = [60, 120, 180, 300, 420]; // 1:00, 2:00, 3:00, 5:00, 7:00
+
+// "00:00" (zero-padded minutes) for the big digital readout.
+function formatCountdownFull(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const m = Math.floor(s / 60);
+  return `${m.toString().padStart(2, "0")}:${(s % 60).toString().padStart(2, "0")}`;
+}
+
+// "1:00" (no leading zero on minutes) for the small preset buttons.
+function formatCountdownShort(totalSeconds) {
+  const s = Math.max(0, Math.round(totalSeconds));
+  const m = Math.floor(s / 60);
+  return `${m}:${(s % 60).toString().padStart(2, "0")}`;
+}
+
+function parseCountdownInput(str, fallbackSeconds) {
+  const match = /^(\d{1,3}):([0-5]?\d)$/.exec(String(str ?? "").trim());
+  if (!match) return fallbackSeconds;
+  return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+}
+
+function countdownPresets(settings) {
+  return Array.isArray(settings?.presets) && settings.presets.length === 5
+    ? settings.presets
+    : COUNTDOWN_DEFAULT_PRESETS;
+}
+
+WidgetTypes.countdown = {
+  label: "Countdown Timer",
+  icon: HeaderIcons.timer,
+
+  defaultSettings() {
+    return { presets: [...COUNTDOWN_DEFAULT_PRESETS] };
+  },
+
+  // Static snapshot, used only for the admin page's live preview -- the
+  // real interactive version is built by mount() below.
+  renderDisplay(settings) {
+    const buttons = countdownPresets(settings)
+      .map((secs) => `<span class="countdown-preset countdown-preset-static">${formatCountdownShort(secs)}</span>`)
+      .join("");
+    return `<div class="widget-body countdown-widget">
+      <div class="countdown-display">00:00</div>
+      <div class="countdown-presets">${buttons}</div>
+    </div>`;
+  },
+
+  renderAdminForm(settings) {
+    const inputs = countdownPresets(settings)
+      .map((secs, i) => `
+        <label class="field" style="max-width:110px;">
+          <span>Button ${i + 1}</span>
+          <input type="text" data-field="preset.${i}" value="${escapeHtml(formatCountdownShort(secs))}" placeholder="M:SS">
+        </label>
+      `)
+      .join("");
+    return `
+      <div class="row">${inputs}</div>
+      <p class="hint">Each button is minutes:seconds, e.g. <code>2:00</code> or <code>0:30</code>. Tapping a button on the board instantly starts (or restarts) the countdown from that value.</p>
+    `;
+  },
+
+  readAdminForm(container) {
+    const presets = [0, 1, 2, 3, 4].map((i) => {
+      const el = container.querySelector(`[data-field="preset.${i}"]`);
+      return parseCountdownInput(el?.value, COUNTDOWN_DEFAULT_PRESETS[i]);
+    });
+    return { presets };
+  },
+
+  // Built once by display.js and left alone on every later re-render, so
+  // an in-progress countdown survives the board's periodic refresh.
+  mount(container, settings) {
+    const presets = countdownPresets(settings);
+    container.className = "widget-body countdown-widget";
+    container.innerHTML = `
+      <div class="countdown-display">00:00</div>
+      <div class="countdown-presets">
+        ${presets.map((secs) => `<button type="button" class="countdown-preset" data-seconds="${secs}">${formatCountdownShort(secs)}</button>`).join("")}
+        <button type="button" class="countdown-reset" title="Reset" aria-label="Reset">&#8635;</button>
+      </div>
+    `;
+
+    const displayEl = container.querySelector(".countdown-display");
+    let intervalHandle = null;
+    let endTime = null;
+
+    function render(totalSeconds) {
+      displayEl.textContent = formatCountdownFull(totalSeconds);
+    }
+
+    function stop(resetDisplay) {
+      if (intervalHandle) clearInterval(intervalHandle);
+      intervalHandle = null;
+      endTime = null;
+      container.classList.remove("countdown-running", "countdown-done");
+      if (resetDisplay) render(0);
+    }
+
+    function tick() {
+      const remainingMs = endTime - Date.now();
+      const remaining = Math.max(0, Math.round(remainingMs / 1000));
+      render(remaining);
+      if (remainingMs <= 0) {
+        clearInterval(intervalHandle);
+        intervalHandle = null;
+        container.classList.remove("countdown-running");
+        container.classList.add("countdown-done");
+      }
+    }
+
+    function start(totalSeconds) {
+      if (!Number.isFinite(totalSeconds) || totalSeconds <= 0) return;
+      stop(false);
+      endTime = Date.now() + totalSeconds * 1000;
+      container.classList.add("countdown-running");
+      container.classList.remove("countdown-done");
+      tick();
+      intervalHandle = setInterval(tick, 250);
+    }
+
+    container.querySelectorAll(".countdown-preset").forEach((btn) => {
+      btn.addEventListener("click", () => start(parseInt(btn.dataset.seconds, 10)));
+    });
+    container.querySelector(".countdown-reset").addEventListener("click", () => stop(true));
+
+    return {
+      dispose() {
+        if (intervalHandle) clearInterval(intervalHandle);
+      },
+    };
   },
 };
 

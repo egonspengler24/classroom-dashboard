@@ -143,6 +143,67 @@ html, body {
 .dinner-tbd { color: var(--muted); font-style: italic; }
 .dinner-empty { color: var(--muted); font-style: italic; }
 
+/* countdown widget */
+.countdown-widget {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: clamp(10px, 2vh, 22px);
+  text-align: center;
+}
+.countdown-display {
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", Menlo, monospace;
+  font-size: clamp(40px, 8vw, 110px);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  color: var(--header-bg);
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+.countdown-widget.countdown-done .countdown-display {
+  color: #b91c1c;
+  animation: countdown-pulse 1s ease-in-out infinite;
+}
+@keyframes countdown-pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.35; }
+}
+.countdown-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5em;
+  justify-content: center;
+}
+.countdown-preset {
+  font-family: inherit;
+  font-size: clamp(13px, 1.3vw, 19px);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  padding: 0.5em 0.9em;
+  min-width: 2.6em;
+  border-radius: 10px;
+  border: 2px solid var(--header-bg);
+  background: #fff;
+  color: var(--header-bg);
+  text-align: center;
+}
+button.countdown-preset { cursor: pointer; }
+button.countdown-preset:hover { background: var(--header-bg); color: #fff; }
+button.countdown-preset:active { transform: scale(0.95); }
+.countdown-preset-static { opacity: 0.85; }
+.countdown-reset {
+  font-size: clamp(15px, 1.5vw, 21px);
+  line-height: 1;
+  padding: 0.45em 0.65em;
+  border-radius: 10px;
+  border: 2px solid var(--card-border);
+  background: #fff;
+  color: var(--muted);
+  cursor: pointer;
+}
+.countdown-reset:hover { border-color: var(--muted); color: var(--card-fg); }
+
 /* word-of-the-week widget */
 .word-headline {
   font-size: clamp(24px, 3vw, 44px);
