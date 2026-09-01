@@ -4,28 +4,6 @@
   "pollIntervalSeconds": 45,
   "widgets": [
     {
-      "id": "lunch-menu",
-      "type": "dinner-menu",
-      "title": "What's for Lunch",
-      "enabled": true,
-      "colSpan": 1,
-      "rowSpan": 1,
-      "order": 1,
-      "schedule": {
-        "start": "",
-        "end": ""
-      },
-      "settings": {
-        "menu": {
-          "monday": "Chicken and Cheese Pie",
-          "tuesday": "Roast chicken, potatoes, veg",
-          "wednesday": "Pasta bolognese, garlic bread",
-          "thursday": "Fish & chips, peas",
-          "friday": "Jacket potato, beans, cheese"
-        }
-      }
-    },
-    {
       "id": "weather-1",
       "type": "weather",
       "title": "Weather",
@@ -59,8 +37,7 @@
       },
       "settings": {
         "items": [
-          "Welcome to the class dashboard!",
-          "Edit me from the admin page."
+          "It's the first day of term today"
         ]
       }
     },
@@ -91,7 +68,13 @@
         "end": ""
       },
       "settings": {
-        "presets": [60, 120, 180, 300, 420]
+        "presets": [
+          60,
+          120,
+          180,
+          300,
+          420
+        ]
       }
     }
   ]
