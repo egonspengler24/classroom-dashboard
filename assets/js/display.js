@@ -33,8 +33,9 @@
       const colSpan = Math.max(1, w.colSpan || 1);
       const rowSpan = Math.max(1, w.rowSpan || 1);
       const body = type ? type.renderDisplay(w.settings || {}) : `<div class="widget-body">Unknown widget type: ${w.type}</div>`;
+      const icon = type?.icon ? `<span class="widget-icon">${type.icon}</span>` : "";
       return `<section class="widget-card" style="grid-column: span ${colSpan}; grid-row: span ${rowSpan};">
-        <h2 class="widget-title">${(w.title || "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]))}</h2>
+        <h2 class="widget-title">${icon}<span>${(w.title || "").replace(/[<>&]/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;" }[c]))}</span></h2>
         ${body}
       </section>`;
     }).join("");

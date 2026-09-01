@@ -18,9 +18,20 @@ function escapeHtml(str) {
   ));
 }
 
+// Small line-icon set shown next to each widget's title. Kept as plain
+// inline SVG (currentColor stroke) so there's no external asset or font
+// dependency and icons always match the widget-title color.
+const HeaderIcons = {
+  plate: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="4"/></svg>`,
+  speaker: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 10v4a1 1 0 0 0 1 1h2l5 4V5L6 9H4a1 1 0 0 0-1 1Z"/><path d="M15 8a4 4 0 0 1 0 8"/><path d="M18 5a8 8 0 0 1 0 14"/></svg>`,
+  sunCloud: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="7" r="2.6"/><path d="M8 2.3v1M8 12v1M3 7h1M13 7h1M4.6 3.6l.7.7M11.4 3.6l-.7.7"/><path d="M9.5 16.5a4 4 0 0 1 .3-8 5 5 0 0 1 9 2.2 3.5 3.5 0 0 1-.8 6.8H9.5Z"/></svg>`,
+  book: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6c-1.5-1.5-4-2-8-2v14c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2V4c-4 0-6.5.5-8 2Z"/><path d="M12 6v14"/></svg>`,
+};
+
 const WidgetTypes = {
   "dinner-menu": {
     label: "What's for Lunch",
+    icon: HeaderIcons.plate,
 
     defaultSettings() {
       return { menu: { monday: "", tuesday: "", wednesday: "", thursday: "", friday: "" } };
@@ -76,6 +87,7 @@ const WidgetTypes = {
 
   "announcements": {
     label: "Announcements",
+    icon: HeaderIcons.speaker,
 
     defaultSettings() {
       return { items: [] };
@@ -186,6 +198,7 @@ function weatherIconSvg(category, isDay) {
 
 WidgetTypes.weather = {
   label: "Weather",
+  icon: HeaderIcons.sunCloud,
 
   defaultSettings() {
     return { locationName: "Morecambe, UK", latitude: 54.07, longitude: -2.86, startHour: 8, endHour: 18 };
@@ -272,6 +285,83 @@ WidgetTypes.weather = {
       startHour: clampHour(parseInt(get("startHour"), 10), 8),
       endHour: clampHour(parseInt(get("endHour"), 10), 18),
     };
+  },
+};
+
+// ---- Word of the Week widget helpers ----
+
+const WORD_LIST_URL = "data/word-of-the-week.json";
+const WORD_LIST_STALE_MS = 60 * 60 * 1000; // refetch at most once an hour
+const WORD_LIST_RETRY_MS = 5 * 60 * 1000; // back off 5 min after a failed fetch
+let WORD_LIST_CACHE = null; // { data, fetchedAt, error, inFlight }
+
+function fetchWordListIfNeeded() {
+  const now = Date.now();
+  if (WORD_LIST_CACHE) {
+    if (WORD_LIST_CACHE.inFlight) return;
+    if (WORD_LIST_CACHE.data && now - WORD_LIST_CACHE.fetchedAt < WORD_LIST_STALE_MS) return;
+    if (WORD_LIST_CACHE.error && now - WORD_LIST_CACHE.fetchedAt < WORD_LIST_RETRY_MS) return;
+  }
+  WORD_LIST_CACHE = { ...(WORD_LIST_CACHE || {}), inFlight: true };
+  fetch(`${WORD_LIST_URL}?_=${now}`, { cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      WORD_LIST_CACHE = { data, fetchedAt: Date.now(), inFlight: false };
+    })
+    .catch((err) => {
+      WORD_LIST_CACHE = { error: String(err), fetchedAt: Date.now(), inFlight: false };
+    });
+}
+
+// ISO-8601 week number (1-53), so the chosen word changes every Monday and
+// is identical across every device without needing any shared "current
+// word" state -- it's purely a function of the date and the word list.
+function isoWeekNumber(date) {
+  const d = new Date(Date.UTC(date.getFullYear(), date.getMonth(), date.getDate()));
+  const dayNum = d.getUTCDay() || 7;
+  d.setUTCDate(d.getUTCDate() + 4 - dayNum);
+  const yearStart = new Date(Date.UTC(d.getUTCFullYear(), 0, 1));
+  return Math.ceil(((d - yearStart) / 86400000 + 1) / 7);
+}
+
+WidgetTypes["word-of-the-week"] = {
+  label: "Word of the Week",
+  icon: HeaderIcons.book,
+
+  defaultSettings() {
+    return {};
+  },
+
+  renderDisplay() {
+    fetchWordListIfNeeded();
+    const entry = WORD_LIST_CACHE;
+
+    if (!entry || (!entry.data && !entry.error)) {
+      return `<div class="widget-body word-widget"><p class="word-status">Loading word of the week&hellip;</p></div>`;
+    }
+    if (entry.error || !Array.isArray(entry.data) || !entry.data.length) {
+      return `<div class="widget-body word-widget"><p class="word-status word-error">Couldn't load the word list.</p></div>`;
+    }
+
+    const list = entry.data;
+    const item = list[isoWeekNumber(new Date()) % list.length];
+
+    return `<div class="widget-body word-widget">
+      <p class="word-headline">${escapeHtml(item.word || "")}</p>
+      ${item.definition ? `<p class="word-definition">${escapeHtml(item.definition)}</p>` : ""}
+      ${item.example ? `<p class="word-example">&ldquo;${escapeHtml(item.example)}&rdquo;</p>` : ""}
+    </div>`;
+  },
+
+  renderAdminForm() {
+    return `<p class="hint">No setup needed &mdash; a new word is chosen automatically every week from <code>data/word-of-the-week.json</code> in the repo, cycling through the list. To change the vocabulary, edit that file on GitHub.</p>`;
+  },
+
+  readAdminForm() {
+    return {};
   },
 };
 

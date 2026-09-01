@@ -272,8 +272,9 @@
     previewMain.innerHTML = widgets.map((w) => {
       const type = WidgetTypes[w.type];
       const body = type ? type.renderDisplay(w.settings || {}) : `<div class="widget-body">Unknown widget type: ${escapeHtml(w.type)}</div>`;
+      const icon = type?.icon ? `<span class="widget-icon">${type.icon}</span>` : "";
       return `<section class="widget-card" style="grid-column: span ${Math.max(1, w.colSpan || 1)}; grid-row: span ${Math.max(1, w.rowSpan || 1)};">
-        <h2 class="widget-title">${escapeHtml(w.title || "")}</h2>
+        <h2 class="widget-title">${icon}<span>${escapeHtml(w.title || "")}</span></h2>
         ${body}
       </section>`;
     }).join("");

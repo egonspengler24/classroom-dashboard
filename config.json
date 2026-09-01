@@ -63,6 +63,20 @@
           "Edit me from the admin page."
         ]
       }
+    },
+    {
+      "id": "word-of-the-week-1",
+      "type": "word-of-the-week",
+      "title": "Word of the Week",
+      "enabled": true,
+      "colSpan": 1,
+      "rowSpan": 1,
+      "order": 4,
+      "schedule": {
+        "start": "",
+        "end": ""
+      },
+      "settings": {}
     }
   ]
 }

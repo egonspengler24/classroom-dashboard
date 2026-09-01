@@ -21,14 +21,22 @@ The admin page needs a GitHub **Personal Access Token** to save changes, because
 
 The token is stored only in that browser's `localStorage` — it is never sent anywhere except directly to GitHub's API. Don't do this on a shared/public computer, and don't send the token itself over email/chat if you're passing it to another device — read it out or use a password manager instead.
 
+## Widgets
+
+- **What's for Lunch** — weekly menu, typed in per day via the admin page.
+- **Weather** — today's forecast for a configurable location, in 2-hour steps, via [Open-Meteo](https://open-meteo.com/) (no API key needed).
+- **Announcements** — free-text list, one per line, via the admin page.
+- **Word of the Week** — fully autonomous: picks a word from [`data/word-of-the-week.json`](data/word-of-the-week.json) based on the ISO calendar week, so it changes every Monday with no admin action needed and stays identical across every device. To change the vocabulary, edit that JSON file directly on GitHub (each entry is `{ "word", "definition", "example" }`); the board picks up edits the same way it picks up `config.json` changes.
+
 ## Adding a widget type
 
 Everything about a widget type lives in one place: `assets/js/widgets.js`. Add a new entry to the `WidgetTypes` object with:
 
 - `label` — shown in the admin "add widget" dropdown
+- `icon` — (optional) an inline SVG string shown next to the widget's title
 - `defaultSettings()` — starting settings for a newly added widget
 - `renderDisplay(settings)` — HTML string rendered on the board
-- `renderAdminForm(settings)` — HTML string of the settings form in the admin page
+- `renderAdminForm(settings)` — HTML string of the settings form in the admin page (return an info message instead of fields if the widget needs no per-instance configuration, like Word of the Week)
 - `readAdminForm(container)` — reads that form back into a settings object
 
 No other file needs to change — both `index.html` and `admin.html` pick up new types automatically.
