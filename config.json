@@ -76,6 +76,28 @@
           420
         ]
       }
+    },
+    {
+      "id": "dinner-menu-1788370250890",
+      "type": "dinner-menu",
+      "title": "What's for Lunch",
+      "enabled": true,
+      "colSpan": 1,
+      "rowSpan": 1,
+      "order": 6,
+      "schedule": {
+        "start": "",
+        "end": ""
+      },
+      "settings": {
+        "menu": {
+          "monday": "",
+          "tuesday": "",
+          "wednesday": "",
+          "thursday": "",
+          "friday": ""
+        }
+      }
     }
   ]
 }
