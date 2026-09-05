@@ -123,24 +123,39 @@ html, body {
 }
 
 /* dinner-menu widget */
-.dinner-today-headline {
+.dinner-day-heading {
   font-size: clamp(16px, 1.6vw, 24px);
   font-weight: 700;
   margin: 0 0 0.6em 0;
   color: var(--header-bg);
 }
-.dinner-week-list { list-style: none; margin: 0; padding: 0; }
-.dinner-day-row {
+.dinner-options { display: flex; flex-direction: column; gap: 0.6em; }
+.dinner-option {
   display: flex;
-  justify-content: space-between;
-  gap: 1em;
-  padding: 0.35em 0.5em;
-  border-bottom: 1px solid var(--card-border);
+  align-items: flex-start;
+  gap: 0.7em;
+  padding: 0.55em 0.7em;
+  border-radius: 10px;
+  background: #f8f9fb;
 }
-.dinner-day-row:last-child { border-bottom: none; }
-.dinner-day-row.dinner-today { background: var(--today-bg); border-radius: 8px; font-weight: 700; }
-.dinner-day-label { color: var(--muted); flex-shrink: 0; min-width: 6.5em; }
-.dinner-tbd { color: var(--muted); font-style: italic; }
+.dinner-option-badge {
+  flex-shrink: 0;
+  font-size: 0.78em;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #fff;
+  padding: 0.3em 0.7em;
+  border-radius: 999px;
+  min-width: 3.6em;
+  text-align: center;
+}
+.dinner-option-red .dinner-option-badge { background: #c0392b; }
+.dinner-option-green .dinner-option-badge { background: #2f8f4e; }
+.dinner-option-blue .dinner-option-badge { background: #2f6fb8; }
+.dinner-option-text { flex: 1; }
+.dinner-status { color: var(--muted); font-style: italic; }
+.dinner-error { color: #b91c1c; }
 .dinner-empty { color: var(--muted); font-style: italic; }
 
 /* countdown widget */

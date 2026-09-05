@@ -23,7 +23,7 @@ The token is stored only in that browser's `localStorage` — it is never sent a
 
 ## Widgets
 
-- **What's for Lunch** — weekly menu, typed in per day via the admin page.
+- **What's for Lunch** — fully autonomous, like Word of the Week: shows today's Red/Green/Blue meal choices, read from [`data/lunch-menu.json`](data/lunch-menu.json). That file encodes the menu as a repeating cycle (`cycleAnchorDate` — a Monday marking the start of "week 1" — plus `cycleLengthWeeks` and a `weeks` array), so the board works out which week applies to any date by counting whole weeks since the anchor, modulo the cycle length. This means the cycle repeats indefinitely in both directions, not just across the date range the source menu happened to list. To update the menu (new cycle, corrected dish, different length), edit that JSON file directly on GitHub — nothing in the admin page needs to change.
 - **Weather** — today's forecast for a configurable location, in 2-hour steps, via [Open-Meteo](https://open-meteo.com/) (no API key needed).
 - **Announcements** — free-text list, one per line, via the admin page.
 - **Word of the Week** — fully autonomous: picks a word from [`data/word-of-the-week.json`](data/word-of-the-week.json) based on the ISO calendar week, so it changes every Monday with no admin action needed and stays identical across every device. To change the vocabulary, edit that JSON file directly on GitHub (each entry is `{ "word", "definition", "example" }`); the board picks up edits the same way it picks up `config.json` changes.

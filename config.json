@@ -89,15 +89,7 @@
         "start": "",
         "end": ""
       },
-      "settings": {
-        "menu": {
-          "monday": "",
-          "tuesday": "",
-          "wednesday": "",
-          "thursday": "",
-          "friday": ""
-        }
-      }
+      "settings": {}
     }
   ]
 }

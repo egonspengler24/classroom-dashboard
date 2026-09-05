@@ -1,0 +1,88 @@
+{
+  "cycleAnchorDate": "2026-04-20",
+  "cycleLengthWeeks": 3,
+  "notes": "cycleAnchorDate is a Monday that starts 'Week 1' of the printed menu. The board works out today's week by counting whole weeks since that date modulo cycleLengthWeeks, so the cycle repeats indefinitely in both directions -- it isn't limited to the Apr-Nov range the menu sheet happened to list. Desserts and the daily salad bar / fruit / jelly / milk note from the source sheet are intentionally left out here since the widget only shows Red/Green/Blue.",
+  "weeks": [
+    {
+      "monday": {
+        "red": "Southern Style Chicken Goujon Wrap, Paprika Potatoes, Veg/BBQ Beans",
+        "green": "Pasta Tubes, Tomato Sauce with Homemade Dough Balls",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "tuesday": {
+        "red": "Mild Beef Chilli Nachos, Mixed Rice & Sweetcorn Medley",
+        "green": "Picnic Lunch: Sandwiches, Vegetarian Sausage Roll, Tortilla Chips",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "wednesday": {
+        "red": "Sausages & Yorkshire Pudding, Mashed Potatoes, Veg & Gravy",
+        "green": "Tomato & Mascarpone Pasta with Homemade Herby Bread",
+        "blue": "Choice of Sandwiches with Tortilla Chips"
+      },
+      "thursday": {
+        "red": "Mild Chicken Curry, Mixed Rice & Naan Bread",
+        "green": "Homemade Cheese Flan with Baby Potatoes & Beans",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "friday": {
+        "red": "Fish Fingers with Chips, Peas or Beans",
+        "green": "Pizza Margherita with Chips & Peas",
+        "blue": "Choice of Sandwiches with Chips"
+      }
+    },
+    {
+      "monday": {
+        "red": "Vegetarian Sausage Roll, Herby Potatoes, Peas & Sweetcorn or Beans",
+        "green": "Tomato & Mascarpone Pasta with Homemade Herby Bread",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "tuesday": {
+        "red": "BBQ Pulled Pork Burrito with Vegetable Rice & Salad",
+        "green": "Mac 'N' Cheese with Homemade Crusty Bread & Garden Peas",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "wednesday": {
+        "red": "Roast Chicken with Roast Potatoes, Seasonal Vegetables & Gravy",
+        "green": "Jacket Potato (choice of fillings)",
+        "blue": "Choice of Sandwiches with Tortilla Chips"
+      },
+      "thursday": {
+        "red": "Beef & Pork Burger with Paprika Potatoes, Vegetable Sticks & Dips",
+        "green": "Pasta Spirals & Tomato Sauce with Homemade Dough Balls",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "friday": {
+        "red": "Crispy Battered Fish with Chips & Peas",
+        "green": "Pizza Margherita with Chips & Sweetcorn",
+        "blue": "Choice of Sandwiches with Chips"
+      }
+    },
+    {
+      "monday": {
+        "red": "Mild Piri Piri Chicken Pitta Pocket with Sunshine Rice & Peas",
+        "green": "Pasta Twists, Tomato Sauce with Homemade Dough Balls",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "tuesday": {
+        "red": "Salmon & Sweet Potato Fishcake with Paprika Potatoes & Mixed Veg",
+        "green": "Picnic Lunch: Sandwiches, Vegetarian Sausage Roll, Tortilla Chips",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "wednesday": {
+        "red": "Honey Roast Gammon & Pineapple with Potatoes & Sweetcorn Medley",
+        "green": "Tomato & Mascarpone Pasta with Homemade Herby Bread",
+        "blue": "Choice of Sandwiches with Tortilla Chips"
+      },
+      "thursday": {
+        "red": "Chicken Tikka Curry with Mixed Rice & Naan Bread",
+        "green": "Puff Pastry Cheese Whirl with Paprika Potatoes & Beans",
+        "blue": "Jacket Potato (choice of fillings)"
+      },
+      "friday": {
+        "red": "Pork Hot Dog, Onions & Ketchup with Chips, Beans or Peas",
+        "green": "Pizza Margherita with Chips & Peas",
+        "blue": "Choice of Sandwiches with Chips"
+      }
+    }
+  ]
+}

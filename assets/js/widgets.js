@@ -44,62 +44,6 @@ const HeaderIcons = {
 };
 
 const WidgetTypes = {
-  "dinner-menu": {
-    label: "What's for Lunch",
-    icon: HeaderIcons.plate,
-
-    defaultSettings() {
-      return { menu: { monday: "", tuesday: "", wednesday: "", thursday: "", friday: "" } };
-    },
-
-    renderDisplay(settings) {
-      const menu = settings?.menu || {};
-      const now = new Date();
-      const todayIdx = now.getDay(); // 0=Sun..6=Sat
-      const todayKey = DAYS[todayIdx - 1]; // undefined on weekends
-
-      if (!todayKey) {
-        return `<div class="widget-body dinner-widget">
-          <p class="dinner-empty">No school lunch today &mdash; enjoy the weekend! 🎉</p>
-        </div>`;
-      }
-
-      const todayText = menu[todayKey] && menu[todayKey].trim();
-      const rows = DAYS.map((d) => {
-        const isToday = d === todayKey;
-        const text = menu[d] && menu[d].trim() ? escapeHtml(menu[d]) : "<span class=\"dinner-tbd\">Not set</span>";
-        return `<li class="dinner-day-row${isToday ? " dinner-today" : ""}">
-          <span class="dinner-day-label">${DAY_LABELS[d]}</span>
-          <span class="dinner-day-text">${text}</span>
-        </li>`;
-      }).join("");
-
-      return `<div class="widget-body dinner-widget">
-        <p class="dinner-today-headline">${todayText ? escapeHtml(todayText) : "<span class=\"dinner-tbd\">Not set yet</span>"}</p>
-        <ul class="dinner-week-list">${rows}</ul>
-      </div>`;
-    },
-
-    renderAdminForm(settings) {
-      const menu = settings?.menu || {};
-      return DAYS.map((d) => `
-        <label class="field">
-          <span>${DAY_LABELS[d]}</span>
-          <textarea data-field="menu.${d}" rows="2" placeholder="e.g. Pizza, salad, fresh fruit">${escapeHtml(menu[d] || "")}</textarea>
-        </label>
-      `).join("");
-    },
-
-    readAdminForm(container) {
-      const menu = {};
-      DAYS.forEach((d) => {
-        const el = container.querySelector(`[data-field="menu.${d}"]`);
-        menu[d] = el ? el.value : "";
-      });
-      return { menu };
-    },
-  },
-
   "announcements": {
     label: "Announcements",
     icon: HeaderIcons.speaker,
@@ -300,6 +244,108 @@ WidgetTypes.weather = {
       startHour: clampHour(parseInt(get("startHour"), 10), 8),
       endHour: clampHour(parseInt(get("endHour"), 10), 18),
     };
+  },
+};
+
+// ---- Lunch menu (Red/Green/Blue) widget helpers ----
+
+const LUNCH_MENU_URL = "data/lunch-menu.json";
+const LUNCH_MENU_STALE_MS = 60 * 60 * 1000; // refetch at most once an hour
+const LUNCH_MENU_RETRY_MS = 5 * 60 * 1000; // back off 5 min after a failed fetch
+let LUNCH_MENU_CACHE = null; // { data, fetchedAt, error, inFlight }
+
+function fetchLunchMenuIfNeeded() {
+  const now = Date.now();
+  if (LUNCH_MENU_CACHE) {
+    if (LUNCH_MENU_CACHE.inFlight) return;
+    if (LUNCH_MENU_CACHE.data && now - LUNCH_MENU_CACHE.fetchedAt < LUNCH_MENU_STALE_MS) return;
+    if (LUNCH_MENU_CACHE.error && now - LUNCH_MENU_CACHE.fetchedAt < LUNCH_MENU_RETRY_MS) return;
+  }
+  LUNCH_MENU_CACHE = { ...(LUNCH_MENU_CACHE || {}), inFlight: true };
+  fetch(`${LUNCH_MENU_URL}?_=${now}`, { cache: "no-store" })
+    .then((res) => {
+      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      return res.json();
+    })
+    .then((data) => {
+      LUNCH_MENU_CACHE = { data, fetchedAt: Date.now(), inFlight: false };
+    })
+    .catch((err) => {
+      LUNCH_MENU_CACHE = { error: String(err), fetchedAt: Date.now(), inFlight: false };
+    });
+}
+
+// Works out which day-key (monday..friday, or null on a weekend) and which
+// week of the repeating cycle applies to `date`, purely from the cycle's
+// anchor date -- so it needs no stored "current week" and extrapolates
+// indefinitely in both directions (before the anchor and beyond however
+// many weeks are listed in the source document).
+function lunchMenuForDate(cycle, date) {
+  const dayKey = DAYS[date.getDay() - 1];
+  if (!dayKey) return { dayKey: null, options: null };
+  if (!cycle?.cycleAnchorDate || !Array.isArray(cycle.weeks) || !cycle.weeks.length) {
+    return { dayKey, options: null };
+  }
+  const anchor = new Date(`${cycle.cycleAnchorDate}T00:00:00`);
+  const todayMidnight = new Date(date.getFullYear(), date.getMonth(), date.getDate());
+  const anchorMidnight = new Date(anchor.getFullYear(), anchor.getMonth(), anchor.getDate());
+  const diffDays = Math.round((todayMidnight - anchorMidnight) / 86400000);
+  const cycleWeeks = cycle.cycleLengthWeeks || cycle.weeks.length;
+  const weeksSinceAnchor = Math.floor(diffDays / 7);
+  const weekIndex = ((weeksSinceAnchor % cycleWeeks) + cycleWeeks) % cycleWeeks;
+  return { dayKey, options: cycle.weeks[weekIndex]?.[dayKey] || null };
+}
+
+const LUNCH_OPTION_COLORS = ["red", "green", "blue"];
+
+WidgetTypes["dinner-menu"] = {
+  label: "What's for Lunch",
+  icon: HeaderIcons.plate,
+
+  defaultSettings() {
+    return {};
+  },
+
+  renderDisplay() {
+    fetchLunchMenuIfNeeded();
+    const entry = LUNCH_MENU_CACHE;
+
+    if (!entry || (!entry.data && !entry.error)) {
+      return `<div class="widget-body dinner-widget"><p class="dinner-status">Loading today's menu&hellip;</p></div>`;
+    }
+    if (entry.error) {
+      return `<div class="widget-body dinner-widget"><p class="dinner-status dinner-error">Couldn't load the lunch menu.</p></div>`;
+    }
+
+    const { dayKey, options } = lunchMenuForDate(entry.data, new Date());
+    if (!dayKey) {
+      return `<div class="widget-body dinner-widget"><p class="dinner-empty">No school lunch today &mdash; enjoy the weekend! 🎉</p></div>`;
+    }
+    if (!options) {
+      return `<div class="widget-body dinner-widget"><p class="dinner-status dinner-error">No menu set for ${DAY_LABELS[dayKey]}.</p></div>`;
+    }
+
+    const rows = LUNCH_OPTION_COLORS.map((color) => {
+      const text = options[color] && options[color].trim();
+      if (!text) return "";
+      return `<div class="dinner-option dinner-option-${color}">
+        <span class="dinner-option-badge">${color.charAt(0).toUpperCase()}${color.slice(1)}</span>
+        <span class="dinner-option-text">${escapeHtml(text)}</span>
+      </div>`;
+    }).join("");
+
+    return `<div class="widget-body dinner-widget">
+      <p class="dinner-day-heading">${DAY_LABELS[dayKey]}</p>
+      <div class="dinner-options">${rows}</div>
+    </div>`;
+  },
+
+  renderAdminForm() {
+    return `<p class="hint">No setup needed &mdash; each day's Red/Green/Blue choices are read automatically from <code>data/lunch-menu.json</code> in the repo, based on a repeating 3-week cycle. To update the menu, edit that file on GitHub.</p>`;
+  },
+
+  readAdminForm() {
+    return {};
   },
 };
 
