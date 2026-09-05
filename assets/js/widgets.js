@@ -20,6 +20,16 @@
  *     an interval) if the widget is later removed or scheduled out.
  *     Such widgets should still provide renderDisplay() for the admin
  *     page's (non-interactive) live preview.
+ *   - initAdminForm(container, ctx): for a widget whose configuration is
+ *     files rather than form fields (e.g. Start of the Day's images),
+ *     builds interactivity into the already-inserted renderAdminForm()
+ *     markup. Called once per widget instance after admin.js renders the
+ *     widget list. `ctx` provides `commitFile(path, base64Content, message)`
+ *     and `getLastCommitDate(path)` (both backed by the GitHub API using
+ *     the admin's saved token) and `imageUrl(path)` (a cache-busted URL for
+ *     previewing a file already published to the repo). Such a widget's
+ *     readAdminForm() typically just returns {}, since nothing it manages
+ *     is stored in config.json.
  * Nothing else in the app needs to change.
  */
 
@@ -41,6 +51,7 @@ const HeaderIcons = {
   sunCloud: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="8" cy="7" r="2.6"/><path d="M8 2.3v1M8 12v1M3 7h1M13 7h1M4.6 3.6l.7.7M11.4 3.6l-.7.7"/><path d="M9.5 16.5a4 4 0 0 1 .3-8 5 5 0 0 1 9 2.2 3.5 3.5 0 0 1-.8 6.8H9.5Z"/></svg>`,
   book: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 6c-1.5-1.5-4-2-8-2v14c4 0 6.5.5 8 2 1.5-1.5 4-2 8-2V4c-4 0-6.5.5-8 2Z"/><path d="M12 6v14"/></svg>`,
   timer: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M9 2h6"/><path d="M12 2v2"/><circle cx="12" cy="13" r="8"/><path d="M12 9v4l3 2"/></svg>`,
+  sunrise: `<svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 18h16"/><path d="M6 15a6 6 0 0 1 12 0"/><path d="M12 4v3"/><path d="M4.5 8.5l1.8 1.8"/><path d="M19.5 8.5l-1.8 1.8"/></svg>`,
 };
 
 const WidgetTypes = {
@@ -560,6 +571,177 @@ WidgetTypes.countdown = {
         if (intervalHandle) clearInterval(intervalHandle);
       },
     };
+  },
+};
+
+// ---- Start of the Day widget helpers ----
+
+const SOTD_DIR = "data/sotd";
+const SOTD_IMAGE_STALE_MS = 5 * 60 * 1000; // don't re-fetch the board's image more than this often
+
+function sotdImagePath(dayKey) {
+  return `${SOTD_DIR}/${dayKey}.png`;
+}
+
+function readFileAsBase64(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",", 2)[1] || "");
+    reader.onerror = () => reject(reader.error || new Error("Couldn't read the file"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function sotdRelativeTime(iso) {
+  if (!iso) return { text: "Never uploaded", cls: "stale" };
+  const diffMs = Date.now() - new Date(iso).getTime();
+  const mins = Math.floor(diffMs / 60000);
+  if (mins < 1) return { text: "Updated just now", cls: "fresh" };
+  if (mins < 60) return { text: `Updated ${mins} min${mins === 1 ? "" : "s"} ago`, cls: "fresh" };
+  const hrs = Math.floor(mins / 60);
+  if (hrs < 24) return { text: `Updated ${hrs} hour${hrs === 1 ? "" : "s"} ago`, cls: "fresh" };
+  const days = Math.floor(hrs / 24);
+  if (days === 1) return { text: "Updated yesterday", cls: "aging" };
+  if (days < 14) return { text: `Updated ${days} days ago`, cls: "aging" };
+  return { text: `Updated ${days} days ago`, cls: "stale" };
+}
+
+function handleSotdImageError(imgEl, dayLabel) {
+  const wrap = imgEl.closest(".sotd-widget");
+  if (wrap) wrap.innerHTML = `<p class="sotd-empty">No activity image uploaded for ${dayLabel} yet.</p>`;
+}
+
+WidgetTypes["start-of-day"] = {
+  label: "Start of the Day",
+  icon: HeaderIcons.sunrise,
+
+  defaultSettings() {
+    return {};
+  },
+
+  // Real board rendering: today's image, cache-busted in 5-minute buckets so
+  // repeated re-renders don't force a re-download but a fresh upload still
+  // shows up within a few minutes.
+  renderDisplay() {
+    const dayKey = DAYS[new Date().getDay() - 1];
+    if (!dayKey) {
+      return `<div class="widget-body sotd-widget"><p class="sotd-empty">No activity today &mdash; enjoy the weekend! 🎉</p></div>`;
+    }
+    const bucket = Math.floor(Date.now() / SOTD_IMAGE_STALE_MS);
+    const url = `${sotdImagePath(dayKey)}?v=${bucket}`;
+    return `<div class="widget-body sotd-widget">
+      <img class="sotd-image" src="${url}" alt="Start of the day activity for ${DAY_LABELS[dayKey]}" onerror="handleSotdImageError(this, '${DAY_LABELS[dayKey]}')">
+    </div>`;
+  },
+
+  // Admin form: a static skeleton: initAdminForm() below wires it up to the
+  // real GitHub-backed uploads once it's in the DOM.
+  renderAdminForm() {
+    const dayCards = DAYS.map((d) => `
+      <div class="day-card" data-day="${d}">
+        <span class="day-name">${DAY_LABELS[d]}</span>
+        <div class="day-thumb" data-role="thumb"><p class="sotd-form-status">Checking&hellip;</p></div>
+        <span class="day-updated" data-role="updated">&nbsp;</span>
+        <button type="button" class="day-replace" data-role="replace">Replace image&hellip;</button>
+      </div>
+    `).join("");
+
+    return `
+      <div class="batch-zone" data-role="batchZone">
+        <div class="batch-zone-text">
+          <strong>Upload a whole week</strong>
+          <span>Choose (or drop) up to 5 images &mdash; they'll fill Monday &rarr; Friday in order.</span>
+        </div>
+        <button type="button" class="btn-secondary btn-small" data-role="batchBtn">Choose images&hellip;</button>
+        <input type="file" accept="image/*" multiple data-role="batchInput" style="display:none;">
+      </div>
+      <div class="sotd-day-grid" data-role="dayGrid">${dayCards}</div>
+      <p class="hint">Each upload saves straight to GitHub as soon as you pick a file &mdash; there's no separate save step for images. Export slides from PowerPoint as PNG (File &rarr; Export &rarr; Change File Type &rarr; PNG &rarr; Save Every Slide).</p>
+    `;
+  },
+
+  readAdminForm() {
+    return {};
+  },
+
+  initAdminForm(container, ctx) {
+    const grid = container.querySelector('[data-role="dayGrid"]');
+    const batchZone = container.querySelector('[data-role="batchZone"]');
+    const batchBtn = container.querySelector('[data-role="batchBtn"]');
+    const batchInput = container.querySelector('[data-role="batchInput"]');
+
+    const dayCard = (key) => grid.querySelector(`.day-card[data-day="${key}"]`);
+    const setThumb = (key, html) => {
+      const el = dayCard(key)?.querySelector('[data-role="thumb"]');
+      if (el) el.innerHTML = html;
+    };
+    const setUpdated = (key, text, cls) => {
+      const el = dayCard(key)?.querySelector('[data-role="updated"]');
+      if (el) { el.textContent = text; el.className = `day-updated ${cls}`; }
+    };
+
+    async function refreshDay(key) {
+      const path = sotdImagePath(key);
+      const exists = await new Promise((resolve) => {
+        const img = new Image();
+        img.onload = () => resolve(true);
+        img.onerror = () => resolve(false);
+        img.src = ctx.imageUrl(path);
+      });
+      setThumb(key, exists ? `<img src="${ctx.imageUrl(path)}" alt="">` : `<p class="sotd-form-status">No image yet</p>`);
+      try {
+        const iso = await ctx.getLastCommitDate(path);
+        const rel = sotdRelativeTime(iso);
+        setUpdated(key, rel.text, rel.cls);
+      } catch {
+        setUpdated(key, "Couldn't check", "stale");
+      }
+    }
+
+    async function uploadDay(key, file) {
+      setThumb(key, `<img src="${URL.createObjectURL(file)}" alt="">`);
+      setUpdated(key, "Uploading&hellip;", "aging");
+      try {
+        const base64 = await readFileAsBase64(file);
+        await ctx.commitFile(sotdImagePath(key), base64, `Update Start of the Day image: ${DAY_LABELS[key]}`);
+        setUpdated(key, "Updated just now", "fresh");
+      } catch (err) {
+        setUpdated(key, `Upload failed: ${err.message}`, "stale");
+      }
+    }
+
+    async function uploadBatch(files) {
+      const list = Array.from(files).slice(0, 5);
+      for (let i = 0; i < list.length; i++) {
+        await uploadDay(DAYS[i], list[i]);
+      }
+    }
+
+    grid.querySelectorAll('[data-role="replace"]').forEach((btn) => {
+      btn.addEventListener("click", () => {
+        const key = btn.closest(".day-card").dataset.day;
+        const picker = document.createElement("input");
+        picker.type = "file";
+        picker.accept = "image/*";
+        picker.onchange = () => { if (picker.files[0]) uploadDay(key, picker.files[0]); };
+        picker.click();
+      });
+    });
+
+    batchBtn.addEventListener("click", () => batchInput.click());
+    batchInput.addEventListener("change", () => uploadBatch(batchInput.files));
+    ["dragenter", "dragover"].forEach((evt) =>
+      batchZone.addEventListener(evt, (e) => { e.preventDefault(); batchZone.classList.add("drag-over"); })
+    );
+    ["dragleave", "drop"].forEach((evt) =>
+      batchZone.addEventListener(evt, (e) => { e.preventDefault(); batchZone.classList.remove("drag-over"); })
+    );
+    batchZone.addEventListener("drop", (e) => {
+      e.preventDefault();
+      if (e.dataTransfer.files.length) uploadBatch(e.dataTransfer.files);
+    });
+
+    DAYS.forEach(refreshDay);
   },
 };
 

@@ -170,6 +170,15 @@
   function renderWidgetList() {
     widgetListEl.innerHTML = configState.widgets.map((w, i) => buildWidgetEditorHtml(w, i)).join("")
       || `<p class="hint">No widgets yet -- add one below.</p>`;
+
+    // Widgets whose configuration is files rather than form fields (e.g.
+    // Start of the Day) wire up their own interactivity here.
+    configState.widgets.forEach((w, i) => {
+      const typeDef = WidgetTypes[w.type];
+      if (!typeDef?.initAdminForm) return;
+      const fieldsEl = widgetListEl.children[i]?.querySelector(".widget-type-fields");
+      if (fieldsEl) typeDef.initAdminForm(fieldsEl, createWidgetFormContext());
+    });
   }
 
   function buildWidgetEditorHtml(widget, index) {
@@ -284,43 +293,80 @@
     return btoa(unescape(encodeURIComponent(str)));
   }
 
-  async function saveConfig() {
+  function githubRepo() {
+    return (localStorage.getItem(REPO_KEY) || DEFAULT_REPO).trim();
+  }
+
+  function githubHeaders() {
     const token = localStorage.getItem(TOKEN_KEY);
-    const repo = (localStorage.getItem(REPO_KEY) || DEFAULT_REPO).trim();
-    if (!token) {
-      setStatus("Add and save a GitHub token above before saving.", "err");
-      return;
+    if (!token) throw new Error("Add and save a GitHub token above before saving.");
+    return { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" };
+  }
+
+  // Shared write path for anything committed to the repo -- config.json
+  // (text) and any widget's uploaded files (e.g. Start of the Day's images)
+  // all go through this same GET-sha-then-PUT dance against the GitHub
+  // Contents API. `base64Content` must already be base64-encoded.
+  async function commitFileToRepo(path, base64Content, message) {
+    const headers = githubHeaders();
+    const apiBase = `https://api.github.com/repos/${githubRepo()}/contents/${path}`;
+
+    let sha;
+    const getRes = await fetch(apiBase, { headers });
+    if (getRes.ok) {
+      sha = (await getRes.json()).sha;
+    } else if (getRes.status !== 404) {
+      throw new Error(`Couldn't check the existing file (HTTP ${getRes.status}). Check the token and repo name.`);
     }
-    if (!configState) return;
 
-    setStatus("Saving&hellip;", "info");
-    const apiBase = `https://api.github.com/repos/${repo}/contents/${CONFIG_PATH}`;
-    const headers = {
-      Authorization: `Bearer ${token}`,
-      Accept: "application/vnd.github+json",
-    };
+    const putRes = await fetch(apiBase, {
+      method: "PUT",
+      headers: { ...headers, "Content-Type": "application/json" },
+      body: JSON.stringify({ message, content: base64Content, sha, branch: "main" }),
+    });
+    if (!putRes.ok) {
+      const errJson = await putRes.json().catch(() => ({}));
+      throw new Error(errJson.message || `HTTP ${putRes.status}`);
+    }
+    return putRes.json();
+  }
 
+  // Last time a given path was actually changed, via the Commits API (the
+  // Contents API doesn't expose this). Returns null if there's no token,
+  // the file has no history, or the lookup fails for any reason.
+  async function getFileLastCommitDate(path) {
+    const token = localStorage.getItem(TOKEN_KEY);
+    if (!token) return null;
     try {
-      const getRes = await fetch(apiBase, { headers });
-      if (!getRes.ok) throw new Error(`Couldn't read current file (HTTP ${getRes.status}). Check the token and repo name.`);
-      const getJson = await getRes.json();
-      const sha = getJson.sha;
+      const res = await fetch(
+        `https://api.github.com/repos/${githubRepo()}/commits?path=${encodeURIComponent(path)}&per_page=1`,
+        { headers: { Authorization: `Bearer ${token}`, Accept: "application/vnd.github+json" } }
+      );
+      if (!res.ok) return null;
+      const commits = await res.json();
+      return commits[0]?.commit?.committer?.date || commits[0]?.commit?.author?.date || null;
+    } catch {
+      return null;
+    }
+  }
 
-      const contentJson = JSON.stringify(configState, null, 2);
-      const putRes = await fetch(apiBase, {
-        method: "PUT",
-        headers: { ...headers, "Content-Type": "application/json" },
-        body: JSON.stringify({
-          message: "Update dashboard config via admin page",
-          content: utf8ToBase64(contentJson),
-          sha,
-          branch: "main",
-        }),
-      });
-      if (!putRes.ok) {
-        const errJson = await putRes.json().catch(() => ({}));
-        throw new Error(errJson.message || `HTTP ${putRes.status}`);
-      }
+  function createWidgetFormContext() {
+    return {
+      commitFile: commitFileToRepo,
+      getLastCommitDate: getFileLastCommitDate,
+      imageUrl: (path) => `${path}?_=${Date.now()}`,
+    };
+  }
+
+  async function saveConfig() {
+    if (!configState) return;
+    setStatus("Saving&hellip;", "info");
+    try {
+      await commitFileToRepo(
+        CONFIG_PATH,
+        utf8ToBase64(JSON.stringify(configState, null, 2)),
+        "Update dashboard config via admin page"
+      );
       setStatus("Saved! The board will pick this up within about a minute.", "ok");
     } catch (err) {
       console.error(err);

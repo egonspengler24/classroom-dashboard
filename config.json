@@ -90,6 +90,20 @@
         "end": ""
       },
       "settings": {}
+    },
+    {
+      "id": "start-of-day-1",
+      "type": "start-of-day",
+      "title": "Start of the Day",
+      "enabled": true,
+      "colSpan": 2,
+      "rowSpan": 2,
+      "order": 7,
+      "schedule": {
+        "start": "",
+        "end": ""
+      },
+      "settings": {}
     }
   ]
 }
